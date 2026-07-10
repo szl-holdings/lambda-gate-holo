@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Λ Gate — Conjecture 1, never a theorem · SZL Holdings</title>
+<meta name="description" content="The Λ (Lambda) governance-trust gate is CONJECTURE 1 — never proven, never green. Its status is fetched live from the machine-checked szl-formula-ledger. The unproven-ness is the whole point."/>
+<!-- 0 runtime CDN. System fonts only. The Λ status is read LIVE from the public
+     szl-formula-ledger (ledger.json + formulas/corpus.json on raw.githubusercontent.com).
+     Λ = Conjecture 1 is a LOCKED doctrine invariant: it is stated even when the ledger is
+     unreachable. The live fetch only DISPLAYS the ledger's machine-check record, labelled
+     REPORTED (from ledger) / UNAVAILABLE. Λ is NEVER shown as proven / green. -->
+<style>
+ :root{
+  --bg:#05070d;--void:#080c14;--panel:#0b121b;--panel2:#0a121b;--line:#1b2734;
+  --proof:#3af4c8;--lattice:#5b8dee;--gold:#e8c074;--cream:#eef3f6;--para:#9fb1bf;
+  --warn:#e88a6a;--dim:#6c7d8c;--false:#d76a6a;
+ }
+ *{box-sizing:border-box}
+ html,body{margin:0;min-height:100%}
+ body{background:var(--bg);color:var(--cream);
+  font:14px/1.55 ui-sans-serif,system-ui,Segoe UI,Roboto,Arial;
+  overflow-x:hidden;position:relative}
+ body::before{content:"";position:fixed;inset:0;z-index:-2;
+  background:
+   radial-gradient(120% 90% at 50% -10%,rgba(232,192,116,.09),transparent 60%),
+   radial-gradient(90% 70% at 12% 110%,rgba(58,244,200,.07),transparent 60%),
+   var(--bg)}
+ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+   linear-gradient(rgba(58,244,200,.03) 1px,transparent 1px) 0 0/100% 34px,
+   linear-gradient(90deg,rgba(91,141,238,.028) 1px,transparent 1px) 0 0/34px 100%;
+  mask-image:radial-gradient(130% 100% at 50% 0%,#000 55%,transparent 100%);
+  animation:drift 24s linear infinite}
+ @keyframes drift{to{background-position:0 34px,34px 0}}
+ @media (prefers-reduced-motion:reduce){body::after{animation:none}}
+ .wrap{max-width:960px;margin:0 auto;padding:22px 18px 48px}
+ header{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:20px}
+ .eyebrow{font:10.5px ui-monospace,monospace;letter-spacing:1.4px;text-transform:uppercase;
+  color:var(--gold);opacity:.9}
+ .glyph{font-size:clamp(48px,11vw,86px);line-height:1;color:var(--gold);
+  text-shadow:0 0 34px rgba(232,192,116,.4);margin:.15em 0 0}
+ h1{font-size:clamp(20px,3.6vw,31px);margin:.15em 0 .1em;letter-spacing:.3px}
+ h1 .neg{color:var(--gold);text-shadow:0 0 20px rgba(232,192,116,.3)}
+ .lede{color:var(--para);max-width:72ch;margin:.35em 0 0;font-size:14.5px}
+ .badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+ .badge{font:10.5px ui-monospace,monospace;padding:3px 9px;border-radius:6px;
+  border:1px solid var(--line);color:var(--para);background:#10171f;white-space:nowrap}
+ .badge b{color:var(--gold);font-weight:600}
+ #status{font:11px ui-monospace,monospace;padding:3px 9px;border-radius:6px;
+  border:1px solid var(--line);background:#10171f;white-space:nowrap}
+ #status.ok{color:var(--proof);border-color:#20323e}
+ #status.bad{color:var(--warn);border-color:#3a2620}
+ #status.wait{color:var(--para)}
+ .hero{border:1px solid #34301f;border-radius:14px;
+  background:linear-gradient(180deg,rgba(232,192,116,.06),var(--void));
+  padding:18px 20px;margin:0 0 24px;position:relative;overflow:hidden}
+ .hero::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.6}
+ .hero .k{font:10px ui-monospace,monospace;letter-spacing:.8px;text-transform:uppercase;color:var(--dim)}
+ .hero .statement{font-size:15.5px;color:var(--cream);margin:.4em 0 0;line-height:1.6}
+ .hero .src{font:11px ui-monospace,monospace;color:var(--lattice);margin-top:10px;word-break:break-word}
+ .verdict{display:inline-block;font:11px ui-monospace,monospace;letter-spacing:.5px;
+  padding:3px 10px;border-radius:6px;border:1px solid var(--gold);color:var(--gold);
+  background:rgba(232,192,116,.08);margin-top:12px}
+ h2{font-size:15px;margin:26px 0 12px;letter-spacing:.3px;color:var(--cream)}
+ .ledger{display:grid;grid-template-columns:1fr;gap:12px}
+ .lrow{border:1px solid var(--line);border-radius:11px;background:var(--panel);
+  padding:13px 15px;display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start}
+ .mark{font-size:20px;line-height:1.2;width:26px;text-align:center}
+ .mark.ok{color:var(--proof)}.mark.false{color:var(--false)}
+ .mark.part{color:var(--lattice)}.mark.conj{color:var(--gold)}
+ .lrow .t{font-size:14px;color:var(--cream);margin:0 0 3px;font-weight:600}
+ .lrow .d{color:var(--para);font-size:13px}
+ .lrow .tag{font:10px ui-monospace,monospace;letter-spacing:.6px;text-transform:uppercase;
+  color:var(--dim);display:inline-block;margin-top:5px;border:1px solid var(--line);
+  padding:1px 7px;border-radius:5px}
+ .note{border-left:2px solid var(--gold);padding:10px 14px;margin:24px 0 0;
+  background:linear-gradient(90deg,rgba(232,192,116,.06),transparent);
+  color:var(--cream);font-size:13.5px;border-radius:0 8px 8px 0}
+ .note b{color:var(--gold)}
+ footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px;
+  color:var(--dim);font:11px/1.7 ui-monospace,monospace}
+ footer a{color:var(--proof);text-decoration:none}
+ footer a:hover{text-decoration:underline}
+ code{font:12px ui-monospace,monospace;color:var(--lattice);
+  background:#0e1620;padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <header>
+  <div class="eyebrow">SZL Holdings · governance-trust gate · holographic roadmap surface</div>
+  <div class="glyph">Λ</div>
+  <h1>The Λ gate is <span class="neg">Conjecture 1</span> — never a theorem, never green.</h1>
+  <p class="lede">Λ (Lambda) is the advisory governance-trust quantity that gates every action
+   in the estate. Its central claim — that Λ is the <em>unique</em> honest aggregator — is an
+   open conjecture. The unproven-ness is the point: a governance number that pretends to be
+   proven would be the dishonest one. Status below is read live from the machine-checked
+   <code>szl-formula-ledger</code>.</p>
+  <div class="badges">
+   <span id="status" class="wait">Reading the ledger…</span>
+   <span class="badge">status <b>CONJECTURE-1</b></span>
+   <span class="badge">trust ceiling <b>0.97</b> · never 100%</span>
+   <span class="badge">unconditional uniqueness <b>machine-checked FALSE</b></span>
+   <span class="badge">0 runtime CDN</span>
+  </div>
+ </header>
+
+ <section class="hero">
+  <span class="k">Ledger entry <span id="entry-id">TH_L1-lambda-uniqueness</span> — the statement, verbatim</span>
+  <p class="statement" id="statement">Loading the exact statement from the ledger…</p>
+  <div class="src" id="source"></div>
+  <span class="verdict" id="verdict">CONJECTURE-1 (never a theorem)</span>
+ </section>
+
+ <h2>What is actually checked (and what is not)</h2>
+ <div class="ledger" id="ledger">
+  <div class="lrow"><div class="mark conj">⬡</div><div>
+   <p class="t">Loading machine-check records…</p>
+   <p class="d">Fetching <code>ledger.json</code> + <code>corpus.json</code> from the public repo.</p>
+  </div></div>
+ </div>
+
+ <p class="note" id="honest-note">
+  <b>Why never green.</b> Λ = Conjecture 1 is a locked doctrine invariant: no amount of
+  engineering upgrades it to a theorem, and its trust ceiling is fixed at 0.97, never 100%.
+  A machine check has already shown its <em>unconditional</em> uniqueness is FALSE
+  (a <code>maxAgg</code> counterexample); only a <em>conditional</em> Theorem U is proven.
+  If the ledger is unreachable this page says <b>UNAVAILABLE</b> — but Λ's conjecture status,
+  being doctrine, still stands.
+ </p>
+
+ <footer>
+  <div>Live source (keyless): <a id="ledger-link" href="https://github.com/szl-holdings/szl-formula-ledger" target="_blank" rel="noopener">szl-formula-ledger</a> · <code>ledger.json</code> + <code>formulas/corpus.json</code>, relayed <b>REPORTED</b>.</div>
+  <div>SZL Holdings · governed AI you can prove · <a href="https://a-11-oy.com" target="_blank" rel="noopener">a-11-oy.com</a> · <a href="https://github.com/szl-holdings/lutar-lean" target="_blank" rel="noopener">lutar-lean</a> · Λ = Conjecture 1, never a theorem · trust ceiling 0.97.</div>
+ </footer>
+</div>
+
+<script>
+const RAW = "https://raw.githubusercontent.com/szl-holdings/szl-formula-ledger/main";
+const CORPUS = RAW + "/formulas/corpus.json";
+const LEDGER = RAW + "/ledger.json";
+const ID = "TH_L1-lambda-uniqueness";
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function setStatus(cls,txt){const el=$("#status");el.className=cls;el.textContent=txt;}
+
+// The four honest facts about Λ, keyed to real ledger/corpus ids so each row cites its source.
+function buildRows(corpusById, ledgerById){
+ const conj = corpusById[ID] || {};
+ const conjLed = ledgerById[ID] || {};
+ const dim = ledgerById["lambda-score-dimensionless"] || {};
+ return [
+  {mark:"conj", cls:"conj",
+   t:"Λ uniqueness — OPEN CONJECTURE 1",
+   d:(conj.reported_status||"CONJECTURE-1 (never a theorem)")+". Ledger machine-check: "+
+     (conjLed.status||"UNCHECKABLE")+" — "+(conjLed.method||"stays Conjecture-1 (never CHECKED)."),
+   tag:"class "+(conj.class||"CONJECTURE")+" · id "+ID},
+  {mark:"false", cls:"false",
+   t:"Unconditional uniqueness — machine-checked FALSE",
+   d:"A maxAgg counterexample refutes unconditional uniqueness. This is a real negative result, kept honestly on the record — not hidden.",
+   tag:"lutar-lean Uniqueness.lean · F23"},
+  {mark:"part", cls:"part",
+   t:"Conditional Theorem U — PROVEN (axiom-free)",
+   d:"Under its stated conditions, uniqueness is proven and machine-checked. That is strictly weaker than the conjecture — and never rounded up to it.",
+   tag:"conditional · proven"},
+  {mark:"ok", cls:"ok",
+   t:"Λ is dimensionless — CHECKED",
+   d:(dim.method||"trust axes are ratios in [0,1] (dimensionless); weighted geo-mean of dimensionless axes stays dimensionless")+".",
+   tag:"class "+(dim.class||"DIMENSIONAL")+" · status "+(dim.status||"CHECKED")}
+ ];
+}
+
+function renderRows(rows){
+ $("#ledger").innerHTML = rows.map(r=>`
+  <div class="lrow">
+   <div class="mark ${r.cls}">${r.mark==="ok"?"✓":r.mark==="false"?"✗":r.mark==="part"?"◐":"⬡"}</div>
+   <div>
+    <p class="t">${esc(r.t)}</p>
+    <p class="d">${esc(r.d)}</p>
+    <span class="tag">${esc(r.tag)}</span>
+   </div>
+  </div>`).join("");
+}
+
+function toMap(arr){const m={};(arr||[]).forEach(x=>{if(x&&x.id)m[x.id]=x;});return m;}
+
+async function grab(url){
+ const ctl = new AbortController();
+ const t = setTimeout(()=>ctl.abort(), 12000);
+ try{
+  const r = await fetch(url,{signal:ctl.signal,cache:"no-store"});
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  return await r.json();
+ } finally { clearTimeout(t); }
+}
+
+async function load(){
+ try{
+  const [corpus, ledger] = await Promise.all([grab(CORPUS), grab(LEDGER)]);
+  const corpusItems = corpus.formulas || corpus.corpus || (Array.isArray(corpus)?corpus:[]);
+  const corpusById = toMap(corpusItems);
+  const ledgerById = toMap(ledger.ledger || ledger);
+  const conj = corpusById[ID];
+  if(conj){
+   $("#statement").textContent = conj.statement || "(statement missing from ledger)";
+   $("#source").innerHTML = "source: "+esc(conj.source||"—");
+   $("#verdict").textContent = conj.reported_status || "CONJECTURE-1 (never a theorem)";
+  } else {
+   $("#statement").textContent = "Entry "+ID+" not found in the ledger corpus.";
+  }
+  renderRows(buildRows(corpusById, ledgerById));
+  const gen = ledger.generated_at ? (" · ledger "+esc(ledger.generated_at.slice(0,10))) : "";
+  setStatus("ok","REPORTED from ledger"+gen);
+ }catch(e){
+  setStatus("bad","UNAVAILABLE — ledger unreachable");
+  $("#statement").innerHTML = "<b style='color:var(--warn)'>UNAVAILABLE.</b> Could not read the "+
+   "szl-formula-ledger (<code>"+esc(String(e.message||e))+"</code>). No cached ledger values are shown. "+
+   "Λ's status is unchanged regardless: it remains <b>Conjecture 1</b> by doctrine — never a theorem, never green.";
+  $("#verdict").textContent = "CONJECTURE-1 (doctrine invariant)";
+  $("#ledger").innerHTML = '<div class="lrow"><div class="mark conj">⬡</div><div>'+
+   '<p class="t">Live ledger records UNAVAILABLE</p>'+
+   '<p class="d">The machine-check detail could not be fetched. The invariant still holds: '+
+   'Λ uniqueness is Conjecture 1, unconditional uniqueness is machine-checked FALSE, only a '+
+   'conditional Theorem U is proven, and Λ is dimensionless.</p>'+
+   '<span class="tag">doctrine invariant · source down</span></div></div>';
+ }
+}
+load();
+</script>
+</body>
+</html>
