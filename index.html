@@ -17,6 +17,7 @@
   --warn:#e88a6a;--dim:#6c7d8c;--false:#d76a6a;
  }
  *{box-sizing:border-box}
+ html{scroll-behavior:smooth;scroll-padding-top:20px}
  html,body{margin:0;min-height:100%}
  body{background:var(--bg);color:var(--cream);
   font:14px/1.55 ui-sans-serif,system-ui,Segoe UI,Roboto,Arial;
@@ -33,8 +34,13 @@
   mask-image:radial-gradient(130% 100% at 50% 0%,#000 55%,transparent 100%);
   animation:drift 24s linear infinite}
  @keyframes drift{to{background-position:0 34px,34px 0}}
- @media (prefers-reduced-motion:reduce){body::after{animation:none}}
- .wrap{max-width:960px;margin:0 auto;padding:22px 18px 48px}
+ @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}body::after{animation:none}}
+ .wrap{max-width:960px;margin:0 auto;padding:max(22px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(48px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))}
+ a:focus-visible{outline:3px solid var(--proof);outline-offset:4px;border-radius:4px}
+ .skip{position:fixed;z-index:20;top:max(8px,env(safe-area-inset-top));left:max(8px,env(safe-area-inset-left));
+  padding:10px 13px;background:var(--proof);color:var(--bg);font:600 12px ui-monospace,monospace;
+  transform:translateY(-180%);transition:transform .2s}
+ .skip:focus{transform:none}
  header{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:20px}
  .eyebrow{font:10.5px ui-monospace,monospace;letter-spacing:1.4px;text-transform:uppercase;
   color:var(--gold);opacity:.9}
@@ -49,7 +55,7 @@
  .badge b{color:var(--gold);font-weight:600}
  #status{font:11px ui-monospace,monospace;padding:3px 9px;border-radius:6px;
   border:1px solid var(--line);background:#10171f;white-space:nowrap}
- #status.ok{color:var(--proof);border-color:#20323e}
+ #status.reported{color:var(--lattice);border-color:#22314d}
  #status.bad{color:var(--warn);border-color:#3a2620}
  #status.wait{color:var(--para)}
  .hero{border:1px solid #34301f;border-radius:14px;
@@ -85,27 +91,47 @@
  footer a:hover{text-decoration:underline}
  code{font:12px ui-monospace,monospace;color:var(--lattice);
   background:#0e1620;padding:1px 5px;border-radius:4px}
+ .identity{display:grid;grid-template-columns:1.1fr .9fr;gap:12px;margin-bottom:24px}
+ .identity>div,.path{border:1px solid var(--line);border-radius:11px;background:var(--panel);padding:15px}
+ .identity h2,.path h2{margin:0 0 7px;font-size:14px}
+ .identity p,.path p{margin:0;color:var(--para);font-size:12.5px}
+ .identity dl{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;margin:0;font:11px/1.5 ui-monospace,monospace}
+ .identity dt{color:var(--dim)}.identity dd{margin:0;color:var(--cream);overflow-wrap:anywhere}
+ .paths{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:24px}
+ .path a{display:inline-flex;align-items:center;min-height:44px;margin-top:10px;color:var(--proof)}
+ @media(max-width:640px){.identity,.paths{grid-template-columns:1fr}.lrow{grid-template-columns:32px minmax(0,1fr)}.badge{white-space:normal}}
 </style>
 </head>
 <body>
+<a class="skip" href="#evidence">Skip to evidence identity</a>
 <div class="wrap">
  <header>
-  <div class="eyebrow">SZL Holdings · governance-trust gate · holographic roadmap surface</div>
+  <div class="eyebrow">SZL Holdings · governance-trust gate · public evidence surface</div>
   <div class="glyph">Λ</div>
   <h1>The Λ gate is <span class="neg">Conjecture 1</span> — never a theorem, never green.</h1>
   <p class="lede">Λ (Lambda) is the advisory governance-trust quantity that gates every action
    in the estate. Its central claim — that Λ is the <em>unique</em> honest aggregator — is an
    open conjecture. The unproven-ness is the point: a governance number that pretends to be
-   proven would be the dishonest one. Status below is read live from the machine-checked
+   proven would be the dishonest one. Status below is fetched at view time and relayed from the
    <code>szl-formula-ledger</code>.</p>
   <div class="badges">
-   <span id="status" class="wait">Reading the ledger…</span>
+   <span id="status" class="wait" role="status" aria-live="polite">Reading the ledger…</span>
    <span class="badge">status <b>CONJECTURE-1</b></span>
    <span class="badge">trust ceiling <b>0.97</b> · never 100%</span>
    <span class="badge">unconditional uniqueness <b>machine-checked FALSE</b></span>
    <span class="badge">0 runtime CDN</span>
   </div>
  </header>
+
+ <section class="identity" id="evidence" aria-label="Evidence identity and provenance">
+  <div><h2>Evidence identity</h2><p><b>REPORTED</b> means this page relays the public ledger record. It does not re-run Lean or upgrade Conjecture 1 to a theorem.</p></div>
+  <div><dl>
+   <dt>source</dt><dd>szl-formula-ledger / main</dd>
+   <dt>entry</dt><dd>TH_L1-lambda-uniqueness</dd>
+   <dt>freshness</dt><dd>fetched by this browser at view time</dd>
+   <dt>failure</dt><dd>UNAVAILABLE; no cached substitute</dd>
+  </dl></div>
+ </section>
 
  <section class="hero">
   <span class="k">Ledger entry <span id="entry-id">TH_L1-lambda-uniqueness</span> — the statement, verbatim</span>
@@ -130,6 +156,11 @@
   If the ledger is unreachable this page says <b>UNAVAILABLE</b> — but Λ's conjecture status,
   being doctrine, still stands.
  </p>
+
+ <section class="paths" aria-label="Investor and evaluator paths">
+  <article class="path"><h2>Investor summary</h2><p>The value is the boundary: conditional results stay separate from the open uniqueness conjecture.</p><a href="https://a11oy.net" target="_blank" rel="noopener">Inspect the evidence index →</a></article>
+  <article class="path"><h2>Developer / evaluator path</h2><p>Compare the rendered entry with the ledger source, then inspect the Lean corpus behind the reported status.</p><a href="https://github.com/szl-holdings/szl-formula-ledger" target="_blank" rel="noopener">Open source and records →</a></article>
+ </section>
 
  <footer>
   <div>Live source (keyless): <a id="ledger-link" href="https://github.com/szl-holdings/szl-formula-ledger" target="_blank" rel="noopener">szl-formula-ledger</a> · <code>ledger.json</code> + <code>formulas/corpus.json</code>, relayed <b>REPORTED</b>.</div>
@@ -212,7 +243,7 @@ async function load(){
   }
   renderRows(buildRows(corpusById, ledgerById));
   const gen = ledger.generated_at ? (" · ledger "+esc(ledger.generated_at.slice(0,10))) : "";
-  setStatus("ok","REPORTED from ledger"+gen);
+  setStatus("reported","REPORTED from ledger"+gen);
  }catch(e){
   setStatus("bad","UNAVAILABLE — ledger unreachable");
   $("#statement").innerHTML = "<b style='color:var(--warn)'>UNAVAILABLE.</b> Could not read the "+
