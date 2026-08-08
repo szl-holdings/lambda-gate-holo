@@ -1,3 +1,21 @@
+---
+title: Lambda Gate - Conjecture 1, never green
+emoji: "⚖️"
+colorFrom: yellow
+colorTo: gray
+sdk: static
+app_file: index.html
+pinned: false
+license: apache-2.0
+short_description: The Lambda trust gate - Conjecture 1, never a theorem
+tags:
+  - governance
+  - lambda
+  - conjecture
+  - honest-by-design
+  - holographic
+---
+
 # lambda-gate-holo
 
 A holographic visual explainer of **Λ (Lambda)**, the advisory governance-trust gate — status
