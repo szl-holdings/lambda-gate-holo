@@ -1,3 +1,21 @@
+---
+title: Lambda Gate - Conjecture 1, never green
+emoji: "⚖️"
+colorFrom: yellow
+colorTo: gray
+sdk: static
+app_file: index.html
+pinned: false
+license: apache-2.0
+short_description: The Lambda trust gate - Conjecture 1, never a theorem
+tags:
+  - governance
+  - lambda
+  - conjecture
+  - honest-by-design
+  - holographic
+---
+
 # lambda-gate-holo
 
 A holographic visual explainer of **Λ (Lambda)**, the advisory governance-trust gate — status
@@ -6,7 +24,7 @@ governance number that pretended to be proven would be the dishonest one.
 
 **Status:** ROADMAP → **LIVE**. Shipped as a static Hugging Face Space:
 **[SZLHOLDINGS/lambda-gate-holo](https://huggingface.co/spaces/SZLHOLDINGS/lambda-gate-holo)**
-→ <https://szlholdings-lambda-gate-holo.hf.space>
+→ <https://szlholdings-lambda-gate-holo.static.hf.space>
 
 ## What it does (sourced EXACTLY from the ledger)
 
