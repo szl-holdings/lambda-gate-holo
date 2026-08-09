@@ -24,7 +24,7 @@ governance number that pretended to be proven would be the dishonest one.
 
 **Status:** ROADMAP → **LIVE**. Shipped as a static Hugging Face Space:
 **[SZLHOLDINGS/lambda-gate-holo](https://huggingface.co/spaces/SZLHOLDINGS/lambda-gate-holo)**
-→ <https://szlholdings-lambda-gate-holo.hf.space>
+→ <https://szlholdings-lambda-gate-holo.static.hf.space>
 
 ## What it does (sourced EXACTLY from the ledger)
 
