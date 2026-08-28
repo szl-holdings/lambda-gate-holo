@@ -419,7 +419,19 @@ def guard_responder(
         if path == f"/repos/{repository}/branches/main":
             branch_calls += 1
             return {"commit": {"sha": SOURCE_SHA if branch_calls == 1 else final_main_sha}}
-        if path == f"/repos/{repository}/commits/{SOURCE_SHA}/pulls":
+        if path == f"/repos/{repository}/pulls":
+            expected_inventory_query = {
+                "state": ["closed"],
+                "base": ["main"],
+                "sort": ["updated"],
+                "direction": ["desc"],
+                "per_page": [str(MODULE.GITHUB_PER_PAGE)],
+            }
+            for key, value in expected_inventory_query.items():
+                if query.get(key) != value:
+                    raise AssertionError(
+                        f"guard omitted exact closed-PR inventory query {key}"
+                    )
             page = int(query.get("page", ["1"])[0])
             if page == 1:
                 associated_scan += 1
@@ -890,18 +902,7 @@ class StaticSpaceContractTests(unittest.TestCase):
             "GITHUB_TOKEN": "github-test-token",
             "GITHUB_API_URL": "https://api.github.test",
         }
-        candidate = {
-            "id": 70,
-            "number": 7,
-            "state": "closed",
-            "merged_at": "2026-08-10T00:00:00Z",
-            "merge_commit_sha": SOURCE_SHA,
-            "base": {
-                "ref": "main",
-                "sha": PARENT_SHA,
-                "repo": {"full_name": repository},
-            },
-        }
+        candidate = exact_merged_pull(repository)
         noise = [{"id": 1000 + index, "state": "open"} for index in range(100)]
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -928,18 +929,7 @@ class StaticSpaceContractTests(unittest.TestCase):
             "GITHUB_TOKEN": "github-test-token",
             "GITHUB_API_URL": "https://api.github.test",
         }
-        candidate = {
-            "id": 70,
-            "number": 7,
-            "state": "closed",
-            "merged_at": "2026-08-10T00:00:00Z",
-            "merge_commit_sha": SOURCE_SHA,
-            "base": {
-                "ref": "main",
-                "sha": PARENT_SHA,
-                "repo": {"full_name": repository},
-            },
-        }
+        candidate = exact_merged_pull(repository)
         second = copy.deepcopy(candidate)
         second.update({"id": 71, "number": 8})
         noise = [{"id": 1000 + index, "state": "open"} for index in range(99)]
