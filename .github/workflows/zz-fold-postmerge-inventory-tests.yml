@@ -1,0 +1,176 @@
+name: Fold post-merge inventory tests into governed closure
+
+on:
+  push:
+    branches:
+      - fix/postmerge-pr-inventory-clean-20260828
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fold-postmerge-inventory-tests-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  fold:
+    if: github.repository == 'szl-holdings/lambda-gate-holo'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the exact branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Preserve the tests inside the governed execution closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          target = Path("tests/test_hf_static_space.py")
+          extra = Path("tests/test_postmerge_pr_inventory.py")
+          workflow = Path(".github/workflows/zz-fold-postmerge-inventory-tests.yml")
+
+          if not target.is_file() or not extra.is_file() or not workflow.is_file():
+              raise SystemExit("bounded fold inputs are incomplete")
+
+          text = target.read_text(encoding="utf-8")
+          if "class PostMergePullInventoryTests" in text:
+              raise SystemExit("post-merge inventory tests are already folded")
+
+          insertion = r'''
+INVENTORY_REPOSITORY = MODULE.load_config()["source_repository"]
+INVENTORY_REPOSITORY_ID = MODULE.TARGET_REPOSITORY_IDS[INVENTORY_REPOSITORY]
+INVENTORY_BEFORE = "b" * 40
+INVENTORY_SOURCE = "a" * 40
+INVENTORY_HEAD = "d" * 40
+
+
+def exact_inventory_row(*, row_id: int = 70, number: int = 7) -> dict:
+    return {
+        "id": row_id,
+        "number": number,
+        "state": "closed",
+        "merged_at": "2026-08-28T15:00:00Z",
+        "merge_commit_sha": INVENTORY_SOURCE,
+        "base": {
+            "ref": "main",
+            "sha": INVENTORY_BEFORE,
+            "repo": {
+                "full_name": INVENTORY_REPOSITORY,
+                "id": INVENTORY_REPOSITORY_ID,
+            },
+        },
+        "head": {
+            "ref": "release-candidate",
+            "sha": INVENTORY_HEAD,
+            "repo": {
+                "full_name": INVENTORY_REPOSITORY,
+                "id": INVENTORY_REPOSITORY_ID,
+            },
+        },
+    }
+
+
+class PostMergePullInventoryTests(unittest.TestCase):
+    def select(self, rows: list[dict]) -> dict:
+        return MODULE._select_exact_merged_pull(
+            rows,
+            INVENTORY_REPOSITORY,
+            INVENTORY_REPOSITORY_ID,
+            INVENTORY_BEFORE,
+            INVENTORY_SOURCE,
+        )
+
+    def test_exact_singleton_survives_unrelated_closed_rows(self) -> None:
+        older = exact_inventory_row(row_id=60, number=6)
+        older["merge_commit_sha"] = "c" * 40
+        newer = exact_inventory_row(row_id=80, number=8)
+        newer["base"]["sha"] = "e" * 40
+        selected = self.select([newer, exact_inventory_row(), older])
+        self.assertEqual(selected["id"], 70)
+
+    def test_two_exact_rows_fail_ambiguously(self) -> None:
+        with self.assertRaisesRegex(MODULE.ContractError, "unambiguous"):
+            self.select(
+                [
+                    exact_inventory_row(),
+                    exact_inventory_row(row_id=71, number=8),
+                ]
+            )
+
+    def test_no_exact_row_fails_closed(self) -> None:
+        row = exact_inventory_row()
+        row["merge_commit_sha"] = "c" * 40
+        with self.assertRaisesRegex(MODULE.ContractError, "unambiguous"):
+            self.select([row])
+
+    def test_every_governed_tuple_field_is_required(self) -> None:
+        mutations = {
+            "state": lambda row: row.__setitem__("state", "open"),
+            "merged_at": lambda row: row.__setitem__("merged_at", None),
+            "merge_sha": lambda row: row.__setitem__(
+                "merge_commit_sha", "c" * 40
+            ),
+            "base_ref": lambda row: row["base"].__setitem__("ref", "dev"),
+            "base_sha": lambda row: row["base"].__setitem__(
+                "sha", "c" * 40
+            ),
+            "base_name": lambda row: row["base"]["repo"].__setitem__(
+                "full_name", "foreign/repository"
+            ),
+            "base_id": lambda row: row["base"]["repo"].__setitem__(
+                "id", INVENTORY_REPOSITORY_ID + 1
+            ),
+            "head_ref": lambda row: row["head"].__setitem__("ref", ""),
+            "head_sha": lambda row: row["head"].__setitem__("sha", "bad"),
+            "head_name": lambda row: row["head"]["repo"].__setitem__(
+                "full_name", "foreign/repository"
+            ),
+            "head_id": lambda row: row["head"]["repo"].__setitem__(
+                "id", INVENTORY_REPOSITORY_ID + 1
+            ),
+            "head_repo": lambda row: row["head"].__setitem__("repo", None),
+        }
+        for label, mutate in mutations.items():
+            with self.subTest(label=label):
+                row = copy.deepcopy(exact_inventory_row())
+                mutate(row)
+                with self.assertRaises(MODULE.ContractError):
+                    self.select([row])
+
+    def test_old_merge_commit_association_is_not_an_authority_input(self) -> None:
+        source = SCRIPT.read_text(encoding="utf-8")
+        self.assertNotIn('commits/{source_sha}/pulls', source)
+        self.assertIn('"state": "closed"', source)
+        self.assertIn('"base": "main"', source)
+        self.assertIn('"direction": "desc"', source)
+'''
+
+          marker = '\n\nif __name__ == "__main__":\n    unittest.main()\n'
+          if marker in text:
+              if text.count(marker) != 1:
+                  raise SystemExit("unittest entrypoint is ambiguous")
+              text = text.replace(marker, "\n\n" + insertion + marker)
+          else:
+              text = text.rstrip() + "\n\n\n" + insertion.strip() + "\n"
+
+          target.write_text(text, encoding="utf-8")
+          extra.unlink()
+          workflow.unlink()
+          PY
+
+          python3 -m py_compile tests/test_hf_static_space.py scripts/hf_static_space.py
+          git config user.name "Lutar, Stephen P."
+          git config user.email "stephenlutar2@gmail.com"
+          git add tests/test_hf_static_space.py \
+            tests/test_postmerge_pr_inventory.py \
+            .github/workflows/zz-fold-postmerge-inventory-tests.yml
+          git diff --cached --check
+          git commit -m "test(release): keep inventory cases in governed closure" \
+            -m "Fold the post-merge PR inventory adversaries into the existing protected test module, remove the extra executable path, and remove this bounded repair workflow."
+          git commit --amend --no-edit --signoff
+          git push origin "HEAD:${GITHUB_REF_NAME}"
