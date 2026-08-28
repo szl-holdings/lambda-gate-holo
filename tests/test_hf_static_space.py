@@ -419,7 +419,19 @@ def guard_responder(
         if path == f"/repos/{repository}/branches/main":
             branch_calls += 1
             return {"commit": {"sha": SOURCE_SHA if branch_calls == 1 else final_main_sha}}
-        if path == f"/repos/{repository}/commits/{SOURCE_SHA}/pulls":
+        if path == f"/repos/{repository}/pulls":
+            expected_inventory_query = {
+                "state": ["closed"],
+                "base": ["main"],
+                "sort": ["updated"],
+                "direction": ["desc"],
+                "per_page": [str(MODULE.GITHUB_PER_PAGE)],
+            }
+            for key, value in expected_inventory_query.items():
+                if query.get(key) != value:
+                    raise AssertionError(
+                        f"guard omitted exact closed-PR inventory query {key}"
+                    )
             page = int(query.get("page", ["1"])[0])
             if page == 1:
                 associated_scan += 1

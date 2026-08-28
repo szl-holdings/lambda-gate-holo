@@ -1165,6 +1165,70 @@ def _exact_merged_pull_projection(
     }
 
 
+def _merged_pull_candidate_is_exact(
+    row: object,
+    repository: str,
+    repository_id: int,
+    before_sha: str,
+    source_sha: str,
+) -> bool:
+    head = row.get("head") if isinstance(row, dict) else None
+    base = row.get("base") if isinstance(row, dict) else None
+    head_repository = head.get("repo") if isinstance(head, dict) else None
+    base_repository = base.get("repo") if isinstance(base, dict) else None
+    head_sha = str((head or {}).get("sha") or "").lower()
+    head_ref = (head or {}).get("ref")
+    return (
+        isinstance(row, dict)
+        and type(row.get("id")) is int
+        and row["id"] > 0
+        and type(row.get("number")) is int
+        and row["number"] > 0
+        and row.get("state") == "closed"
+        and isinstance(row.get("merged_at"), str)
+        and bool(row["merged_at"])
+        and row.get("merge_commit_sha") == source_sha
+        and isinstance(base, dict)
+        and base.get("ref") == "main"
+        and base.get("sha") == before_sha
+        and isinstance(base_repository, dict)
+        and base_repository.get("full_name") == repository
+        and base_repository.get("id") == repository_id
+        and isinstance(head, dict)
+        and isinstance(head_ref, str)
+        and bool(head_ref)
+        and HEX40.fullmatch(head_sha) is not None
+        and isinstance(head_repository, dict)
+        and head_repository.get("full_name") == repository
+        and head_repository.get("id") == repository_id
+    )
+
+
+def _select_exact_merged_pull(
+    rows: list[dict],
+    repository: str,
+    repository_id: int,
+    before_sha: str,
+    source_sha: str,
+) -> dict:
+    matches = [
+        row
+        for row in rows
+        if _merged_pull_candidate_is_exact(
+            row,
+            repository,
+            repository_id,
+            before_sha,
+            source_sha,
+        )
+    ]
+    if len(matches) != 1:
+        raise ContractError(
+            "exact main revision is not one unambiguous merged PR"
+        )
+    return matches[0]
+
+
 def _require_latest_run_still_exact(
     api_root: str,
     token: str,
@@ -1254,28 +1318,27 @@ def require_governed_main(
             raise ContractError(
                 f"refusing stale release: current main {live_sha!r} != source {source_sha!r}"
             )
+        pull_inventory_query = urllib.parse.urlencode(
+            {
+                "state": "closed",
+                "base": "main",
+                "sort": "updated",
+                "direction": "desc",
+            }
+        )
         associated_url = (
-            f"{api_root}/repos/{repository}/commits/{source_sha}/pulls"
+            f"{api_root}/repos/{repository}/pulls?{pull_inventory_query}"
         )
         associated = _complete_list_inventory(
-            associated_url, token, "associated pull-request"
+            associated_url, token, "closed main pull-request"
         )
-        candidates = [
-            row
-            for row in associated
-            if isinstance(row, dict)
-            and row.get("state") == "closed"
-            and row.get("merged_at")
-            and row.get("merge_commit_sha") == source_sha
-            and isinstance(row.get("base"), dict)
-            and row["base"].get("ref") == "main"
-            and row["base"].get("sha") == before_sha
-            and isinstance(row["base"].get("repo"), dict)
-            and row["base"]["repo"].get("full_name") == repository
-        ]
-        if len(candidates) != 1:
-            raise ContractError("exact main revision is not one unambiguous merged PR")
-        candidate = candidates[0]
+        candidate = _select_exact_merged_pull(
+            associated,
+            repository,
+            expected_repository_id,
+            before_sha,
+            source_sha,
+        )
         number = candidate.get("number")
         if type(number) is not int or number <= 0:
             raise ContractError("associated pull-request number is malformed")
@@ -1415,11 +1478,11 @@ def require_governed_main(
                 "pull-request head association changed during authorization"
             )
         final_associated = _complete_list_inventory(
-            associated_url, token, "final associated pull-request"
+            associated_url, token, "final closed main pull-request"
         )
         if canonical_json(final_associated) != canonical_json(associated):
             raise ContractError(
-                "associated pull-request inventory changed during authorization"
+                "closed main pull-request inventory changed during authorization"
             )
         final_branch = _request_json(
             f"{api_root}/repos/{repository}/branches/main", token
