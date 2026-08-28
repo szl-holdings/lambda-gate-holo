@@ -890,18 +890,7 @@ class StaticSpaceContractTests(unittest.TestCase):
             "GITHUB_TOKEN": "github-test-token",
             "GITHUB_API_URL": "https://api.github.test",
         }
-        candidate = {
-            "id": 70,
-            "number": 7,
-            "state": "closed",
-            "merged_at": "2026-08-10T00:00:00Z",
-            "merge_commit_sha": SOURCE_SHA,
-            "base": {
-                "ref": "main",
-                "sha": PARENT_SHA,
-                "repo": {"full_name": repository},
-            },
-        }
+        candidate = exact_merged_pull(repository)
         noise = [{"id": 1000 + index, "state": "open"} for index in range(100)]
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -928,18 +917,7 @@ class StaticSpaceContractTests(unittest.TestCase):
             "GITHUB_TOKEN": "github-test-token",
             "GITHUB_API_URL": "https://api.github.test",
         }
-        candidate = {
-            "id": 70,
-            "number": 7,
-            "state": "closed",
-            "merged_at": "2026-08-10T00:00:00Z",
-            "merge_commit_sha": SOURCE_SHA,
-            "base": {
-                "ref": "main",
-                "sha": PARENT_SHA,
-                "repo": {"full_name": repository},
-            },
-        }
+        candidate = exact_merged_pull(repository)
         second = copy.deepcopy(candidate)
         second.update({"id": 71, "number": 8})
         noise = [{"id": 1000 + index, "state": "open"} for index in range(99)]
