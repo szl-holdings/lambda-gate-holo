@@ -2456,6 +2456,91 @@ class StaticSpaceContractTests(unittest.TestCase):
             self.assertFalse(receipt_path.exists())
 
 
+class PublicMergeRevisionRebindTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.repository = MODULE.load_config()["source_repository"]
+        self.repository_id = MODULE.TARGET_REPOSITORY_IDS[self.repository]
+        self.candidate = exact_merged_pull(self.repository)
+
+    def project(self, pull: dict) -> dict:
+        return MODULE._exact_merged_pull_projection_with_public_rebind(
+            pull,
+            self.candidate,
+            self.repository,
+            self.repository_id,
+            PARENT_SHA,
+            SOURCE_SHA,
+        )
+
+    def test_authenticated_exact_merge_does_not_need_public_rebind(self) -> None:
+        with mock.patch.object(MODULE, "_request_json") as request:
+            evidence = self.project(copy.deepcopy(self.candidate))
+        request.assert_not_called()
+        self.assertEqual(evidence["merge_revision"], SOURCE_SHA)
+
+    def test_redacted_authenticated_merge_requires_exact_public_rebind(self) -> None:
+        authenticated = copy.deepcopy(self.candidate)
+        authenticated["merge_commit_sha"] = None
+        public = copy.deepcopy(self.candidate)
+        with mock.patch.object(
+            MODULE, "_request_json", return_value=public
+        ) as request:
+            evidence = self.project(authenticated)
+        request.assert_called_once_with(
+            f"{MODULE.PUBLIC_GITHUB_API_ROOT}/repos/"
+            f"{self.repository}/pulls/7"
+        )
+        self.assertEqual(evidence["merge_revision"], SOURCE_SHA)
+
+    def test_public_rebind_rejects_common_projection_drift(self) -> None:
+        authenticated = copy.deepcopy(self.candidate)
+        authenticated["merge_commit_sha"] = None
+        public = copy.deepcopy(self.candidate)
+        public["merged_by"]["login"] = "different-merger"
+        with mock.patch.object(
+            MODULE, "_request_json", return_value=public
+        ):
+            with self.assertRaisesRegex(
+                MODULE.ContractError, "does not match authenticated projection"
+            ):
+                self.project(authenticated)
+
+    def test_public_rebind_rejects_wrong_public_merge_revision(self) -> None:
+        authenticated = copy.deepcopy(self.candidate)
+        authenticated["merge_commit_sha"] = None
+        public = copy.deepcopy(self.candidate)
+        public["merge_commit_sha"] = TARGET_SHA
+        with mock.patch.object(
+            MODULE, "_request_json", return_value=public
+        ):
+            with self.assertRaisesRegex(
+                MODULE.ContractError, "merged pull-request tuple is not exact"
+            ):
+                self.project(authenticated)
+
+    def test_candidate_selector_accepts_only_null_or_exact_merge_revision(self) -> None:
+        redacted = copy.deepcopy(self.candidate)
+        redacted["merge_commit_sha"] = None
+        selected = MODULE._select_exact_merged_pull(
+            [redacted],
+            self.repository,
+            self.repository_id,
+            PARENT_SHA,
+            SOURCE_SHA,
+        )
+        self.assertIs(selected, redacted)
+        wrong = copy.deepcopy(self.candidate)
+        wrong["merge_commit_sha"] = TARGET_SHA
+        with self.assertRaisesRegex(MODULE.ContractError, "unambiguous"):
+            MODULE._select_exact_merged_pull(
+                [wrong],
+                self.repository,
+                self.repository_id,
+                PARENT_SHA,
+                SOURCE_SHA,
+            )
+
+
 class WorkflowBoundaryTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:

@@ -1118,6 +1118,8 @@ def _exact_merged_pull_projection(
     repository_id: int,
     before_sha: str,
     source_sha: str,
+    *,
+    allow_redacted_merge_revision: bool = False,
 ) -> dict:
     if not isinstance(pull, dict) or pull.get("id") != candidate.get("id"):
         raise ContractError("merged pull-request readback is not exact")
@@ -1132,7 +1134,13 @@ def _exact_merged_pull_projection(
         or not pull.get("merged")
         or not isinstance(pull.get("merged_at"), str)
         or not pull["merged_at"]
-        or pull.get("merge_commit_sha") != source_sha
+        or (
+            pull.get("merge_commit_sha") != source_sha
+            and not (
+                allow_redacted_merge_revision
+                and pull.get("merge_commit_sha") is None
+            )
+        )
         or not isinstance(base, dict)
         or base.get("ref") != "main"
         or base.get("sha") != before_sha
@@ -1165,6 +1173,56 @@ def _exact_merged_pull_projection(
     }
 
 
+def _exact_merged_pull_projection_with_public_rebind(
+    pull: object,
+    candidate: dict,
+    repository: str,
+    repository_id: int,
+    before_sha: str,
+    source_sha: str,
+) -> dict:
+    authenticated_evidence = _exact_merged_pull_projection(
+        pull,
+        candidate,
+        repository,
+        repository_id,
+        before_sha,
+        source_sha,
+        allow_redacted_merge_revision=True,
+    )
+    authenticated_merge_revision = (
+        pull.get("merge_commit_sha") if isinstance(pull, dict) else None
+    )
+    if authenticated_merge_revision == source_sha:
+        return authenticated_evidence
+    if authenticated_merge_revision is not None:
+        raise ContractError(
+            "authenticated merged pull-request revision is neither exact nor redacted"
+        )
+    number = candidate.get("number")
+    if type(number) is not int or number <= 0:
+        raise ContractError("public merged pull-request number is malformed")
+    public_url = (
+        f"{PUBLIC_GITHUB_API_ROOT}/repos/{repository}/pulls/{number}"
+    )
+    public_pull = _request_json(public_url)
+    public_evidence = _exact_merged_pull_projection(
+        public_pull,
+        candidate,
+        repository,
+        repository_id,
+        before_sha,
+        source_sha,
+    )
+    if canonical_json(public_evidence) != canonical_json(
+        authenticated_evidence
+    ):
+        raise ContractError(
+            "public merged pull-request readback does not match authenticated projection"
+        )
+    return public_evidence
+
+
 def _merged_pull_candidate_is_exact(
     row: object,
     repository: str,
@@ -1187,7 +1245,7 @@ def _merged_pull_candidate_is_exact(
         and row.get("state") == "closed"
         and isinstance(row.get("merged_at"), str)
         and bool(row["merged_at"])
-        and row.get("merge_commit_sha") == source_sha
+        and row.get("merge_commit_sha") in {None, source_sha}
         and isinstance(base, dict)
         and base.get("ref") == "main"
         and base.get("sha") == before_sha
@@ -1343,7 +1401,7 @@ def require_governed_main(
         if type(number) is not int or number <= 0:
             raise ContractError("associated pull-request number is malformed")
         pull = _request_json(f"{api_root}/repos/{repository}/pulls/{number}", token)
-        pull_evidence = _exact_merged_pull_projection(
+        pull_evidence = _exact_merged_pull_projection_with_public_rebind(
             pull,
             candidate,
             repository,
@@ -1450,7 +1508,7 @@ def require_governed_main(
         final_pull = _request_json(
             f"{api_root}/repos/{repository}/pulls/{number}", token
         )
-        final_pull_evidence = _exact_merged_pull_projection(
+        final_pull_evidence = _exact_merged_pull_projection_with_public_rebind(
             final_pull,
             candidate,
             repository,
