@@ -1,0 +1,80 @@
+name: Import validated public merge-revision rebind
+
+on:
+  push:
+    branches:
+      - fix/public-merge-revision-rebind-staging-20260828
+
+permissions:
+  contents: write
+
+concurrency:
+  group: import-public-merge-revision-rebind-20260828
+  cancel-in-progress: false
+
+jobs:
+  import:
+    if: github.repository == 'szl-holdings/lambda-gate-holo' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact staging branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Import exact validated generic release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_revision='76f74c2811be54f23dddcd3fa46e9514561113d4'
+          base='https://raw.githubusercontent.com/szl-holdings/governed-norm-holo/'"$source_revision"
+          curl --fail --silent --show-error --location \
+            "$base/scripts/hf_static_space.py" \
+            --output scripts/hf_static_space.py
+          curl --fail --silent --show-error --location \
+            "$base/tests/test_hf_static_space.py" \
+            --output tests/test_hf_static_space.py
+          test "$(git hash-object scripts/hf_static_space.py)" = \
+            '3998e5081dd0c978a1bae4a5e3d722e7b2766d9a'
+          test "$(git hash-object tests/test_hf_static_space.py)" = \
+            'a6430294b11d41aa2228e45f1bf771da46fcc6f3'
+          rm .github/workflows/import-public-merge-rebind.yml
+
+      - name: Set up exact Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12.13'
+          check-latest: false
+
+      - name: Validate the complete Lambda release contract
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -r requirements/hf-validator.lock
+          python -m py_compile scripts/hf_static_space.py tests/test_hf_static_space.py
+          python -m unittest discover -s tests -v
+          test ! -d scripts/__pycache__
+          test ! -d tests/__pycache__
+          git diff --check
+
+      - name: Commit validated source and tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Lutar, Stephen P.'
+          git config user.email 'stephenlutar2@gmail.com'
+          git add \
+            scripts/hf_static_space.py \
+            tests/test_hf_static_space.py \
+            .github/workflows/import-public-merge-rebind.yml
+          git diff --cached --check
+          git commit \
+            -m "fix(release): rebind redacted merge revision publicly" \
+            -m "Import the byte-exact validated redaction-aware public merge-revision rebind, preserve every existing release authority gate, and remove this bounded import workflow." \
+            -m "Signed-off-by: Lutar, Stephen P. <stephenlutar2@gmail.com>"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
